@@ -1,15 +1,17 @@
 from typing import Union, Optional
 
+from nonebot.plugin.on import on_notice
 from nonebot import get_asgi, on_command
 from nonebot.internal.matcher import Matcher
-from nonebot.adapters.onebot.v11 import GroupMessageEvent
 from starlette.websockets import WebSocket, WebSocketDisconnect
+from nonebot.adapters.onebot.v11 import PokeNotifyEvent, GroupMessageEvent
 
 from .bot import send
 from .models import Info, Status, parse_event, make_message
 
 app = get_asgi()
-matcher = on_command("服务器状态", aliases={"状态"})
+msg_matcher = on_command("服务器状态", aliases={"状态"})
+poke_matcher = on_notice()
 
 
 class ConnectionManager:
@@ -57,11 +59,21 @@ async def mcdr(websocket: WebSocket):
         manager.connection = None
 
 
-@matcher.handle()
-async def send_status(matcher: Matcher, event: GroupMessageEvent):
+async def send_status(matcher: Matcher, group_id: int):
     connection = manager.connection
     if not connection:
         await matcher.finish("当前未连接服务器，无法获取信息，请稍后再试", at_sender=True)
     await connection.send_json(
-        {"type": "get_server_info", "group": event.group_id}
+        {"type": "get_server_info", "group": group_id}
     )
+
+
+@msg_matcher.handle()
+async def send_status_from_msg(matcher: Matcher, event: GroupMessageEvent):
+    await send_status(matcher, event.group_id)
+
+
+@poke_matcher.handle()
+async def send_status_from_poke(matcher: Matcher, event: PokeNotifyEvent):
+    if event.group_id:
+        await send_status(matcher, event.group_id)
