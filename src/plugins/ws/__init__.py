@@ -1,5 +1,6 @@
 from typing import Union, Optional
 
+from nonebot.rule import to_me
 from nonebot.plugin.on import on_notice
 from nonebot import get_asgi, on_command
 from nonebot.internal.matcher import Matcher
@@ -11,7 +12,7 @@ from .models import Info, Status, parse_event, make_message
 
 app = get_asgi()
 msg_matcher = on_command("服务器状态", aliases={"状态"})
-poke_matcher = on_notice()
+poke_matcher = on_notice(rule=to_me())
 
 
 class ConnectionManager:
